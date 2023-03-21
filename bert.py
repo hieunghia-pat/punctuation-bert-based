@@ -11,6 +11,7 @@ import re
 import pickle
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 import torch
 import torch.nn.functional as F
 from transformers import (BertForTokenClassification, BertTokenizer, BertConfig,
@@ -320,7 +321,7 @@ def main():
             tr_loss = 0
             model.train()
             nb_tr_examples, nb_tr_steps = 0, 0
-            for step, batch in enumerate(train_dataloader):
+            for step, batch in tqdm(list(enumerate(train_dataloader)), desc="Training"):
                 batch = tuple(t.to(device) for t in batch)
                 input_ids, input_mask, segment_ids, label_ids, valid_ids,l_mask = batch
                 loss = model(input_ids, segment_ids, input_mask, label_ids,valid_ids,l_mask)
@@ -383,7 +384,7 @@ def main():
                 y_true = []
                 y_pred = []
                 label_map = {i : label for i, label in enumerate(label_list,1)}
-                for input_ids, input_mask, segment_ids, label_ids,valid_ids,l_mask in eval_dataloader:
+                for input_ids, input_mask, segment_ids, label_ids,valid_ids,l_mask in tqdm(eval_dataloader, desc="Evaluating"):
                     input_ids = input_ids.to(device)
                     input_mask = input_mask.to(device)
                     segment_ids = segment_ids.to(device)

@@ -8,6 +8,7 @@ import os
 import random
 import sys
 import re
+from tqdm import tqdm
 
 import pandas as pd
 import numpy as np
@@ -173,7 +174,7 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
 
     features = []
     loop_times = [0, 1] if mode == 'train' else [0]
-    for (ex_index,example) in enumerate(examples):
+    for example in tqdm(examples, desc="Converting into features"):
       for t in loop_times:
         textlist = example.text_a.split(' ')
         labellist = example.label
@@ -241,16 +242,16 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
         assert len(valid) == max_seq_length
         assert len(label_mask) == max_seq_length
 
-        if ex_index < 5:
-            logger.info("*** Example ***")
-            logger.info("guid: %s" % (example.guid))
-            logger.info("tokens: %s" % " ".join(
-                    [str(x) for x in tokens]))
-            logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-            logger.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
-            logger.info(
-                    "segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-            # logger.info("label: %s (id = %d)" % (example.label, label_ids))
+        # if ex_index < 5:
+        #     logger.info("*** Example ***")
+        #     logger.info("guid: %s" % (example.guid))
+        #     logger.info("tokens: %s" % " ".join(
+        #             [str(x) for x in tokens]))
+        #     logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
+        #     logger.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
+        #     logger.info(
+        #             "segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
+        #     # logger.info("label: %s (id = %d)" % (example.label, label_ids))
 
         features.append(
                 InputFeatures(input_ids=input_ids,
