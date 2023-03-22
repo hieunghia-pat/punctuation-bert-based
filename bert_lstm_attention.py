@@ -320,31 +320,37 @@ def main():
             tr_loss = 0
             model.train()
             nb_tr_examples, nb_tr_steps = 0, 0
-            for step, batch in enumerate(train_dataloader):
-                batch = tuple(t.to(device) for t in batch)
-                input_ids, input_mask, segment_ids, label_ids, valid_ids,l_mask = batch
-                loss = model(input_ids, segment_ids, input_mask, label_ids,valid_ids,l_mask)
-                if n_gpu > 1:
-                    loss = loss.mean() # mean() to average on multi-gpu.
-                if args.gradient_accumulation_steps > 1:
-                    loss = loss / args.gradient_accumulation_steps
+            with tqdm(list(enumerate(train_dataloader)), desc="Training") as pb:
+                for step, batch in enumerate(train_dataloader):
+                    batch = tuple(t.to(device) for t in batch)
+                    input_ids, input_mask, segment_ids, label_ids, valid_ids,l_mask = batch
+                    loss = model(input_ids, segment_ids, input_mask, label_ids,valid_ids,l_mask)
+                    if n_gpu > 1:
+                        loss = loss.mean() # mean() to average on multi-gpu.
+                    if args.gradient_accumulation_steps > 1:
+                        loss = loss / args.gradient_accumulation_steps
 
-                if args.fp16:
-                    with amp.scale_loss(loss, optimizer) as scaled_loss:
-                        scaled_loss.backward()
-                    torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), args.max_grad_norm)
-                else:
-                    loss.backward()
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                    if args.fp16:
+                        with amp.scale_loss(loss, optimizer) as scaled_loss:
+                            scaled_loss.backward()
+                        torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), args.max_grad_norm)
+                    else:
+                        loss.backward()
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
 
-                tr_loss += loss.item()
-                nb_tr_examples += input_ids.size(0)
-                nb_tr_steps += 1
-                if (step + 1) % args.gradient_accumulation_steps == 0:
-                    optimizer.step()
-                    scheduler.step()  # Update learning rate schedule
-                    model.zero_grad()
-                    global_step += 1
+                    tr_loss += loss.item()
+
+                    pb.set_postfix({
+                        "loss": tr_loss / (step+1)
+                    })
+
+                    nb_tr_examples += input_ids.size(0)
+                    nb_tr_steps += 1
+                    if (step + 1) % args.gradient_accumulation_steps == 0:
+                        optimizer.step()
+                        scheduler.step()  # Update learning rate schedule
+                        model.zero_grad()
+                        global_step += 1
 
             # Save a checkpoint
             torch.save({
@@ -382,7 +388,7 @@ def main():
                 y_true = []
                 y_pred = []
                 label_map = {i : label for i, label in enumerate(label_list,1)}
-                for input_ids, input_mask, segment_ids, label_ids,valid_ids,l_mask in eval_dataloader:
+                for input_ids, input_mask, segment_ids, label_ids,valid_ids,l_mask in tqdm(eval_dataloader, desc="Evaluating"):
                     input_ids = input_ids.to(device)
                     input_mask = input_mask.to(device)
                     segment_ids = segment_ids.to(device)
@@ -464,7 +470,7 @@ def main():
         y_true = []
         y_pred = []
         label_map = {i : label for i, label in enumerate(label_list,1)}
-        for input_ids, input_mask, segment_ids, label_ids,valid_ids,l_mask in eval_dataloader:
+        for input_ids, input_mask, segment_ids, label_ids,valid_ids,l_mask in tqdm(eval_dataloader, desc="Evaluating"):
             input_ids = input_ids.to(device)
             input_mask = input_mask.to(device)
             segment_ids = segment_ids.to(device)
